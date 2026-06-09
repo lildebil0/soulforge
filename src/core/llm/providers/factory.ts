@@ -3,22 +3,18 @@ import type { LanguageModel } from "ai";
 import { loadConfig } from "../../../config/index.js";
 import { getProviderApiKey } from "../../secrets.js";
 import { getCompatReasoningBody } from "../compat-reasoning.js";
-import { createReasoningFetchWrapper } from "./reasoning-fetch.js";
 import type { ProviderDefinition, ProviderModelInfo } from "./types.js";
 
 // Factory.ai (Droid) subscription. The Droid CLI talks to an OpenAI-compatible
 // inference endpoint: https://api.factory.ai/api/llm/o/v1/chat/completions
-// (there is also an Anthropic-shaped /api/llm/a/v1/messages, but /o/v1 serves
-// every model — including Claude — with standard OpenAI streaming, and Bearer
-// auth, which @ai-sdk/openai-compatible matches and which surfaces GLM/etc.
-// reasoning_content as reasoning parts).
+// Auth is the Factory API key as a Bearer token; the CLI also sends client-id
+// headers and a per-model `x-api-provider` upstream-routing header (below).
+// @ai-sdk/openai-compatible matches the Bearer auth and surfaces reasoning_content.
 //
-// Auth: the Factory API key as a Bearer token. The CLI also sends client-id
-// headers; we replicate the ones Factory checks.
-//
-// NOTE: api.factory.ai is region-gated. If Factory blocks your region, run
-// soulforge behind your proxy (HTTPS_PROXY=http://127.0.0.1:PORT) — Bun's fetch
-// honours it — exactly like the Droid CLI does.
+// PROXY (optional, toggleable, Factory-scoped): api.factory.ai may be
+// region-gated. Set FACTORY_PROXY (e.g. http://127.0.0.1:3067) to route ONLY
+// Factory requests through that proxy; unset it to go direct. Unlike a global
+// HTTPS_PROXY this leaves every other provider untouched.
 const BASE_URL = "https://api.factory.ai/api/llm/o/v1";
 const CLIENT_VERSION = "0.143.0";
 
@@ -56,6 +52,34 @@ function factoryHeaders(modelId: string): Record<string, string> {
   return h;
 }
 
+/**
+ * Per-request fetch for Factory: injects the OpenAI-compatible reasoning body
+ * and, when FACTORY_PROXY is set, routes through that proxy (Bun's `proxy`
+ * option, scoped to Factory). Returns undefined when neither is needed, so the
+ * caller falls back to the default fetch.
+ */
+function factoryFetch(reasoningBody: Record<string, unknown>): typeof fetch | undefined {
+  const proxy = process.env.FACTORY_PROXY;
+  const hasBody = Object.keys(reasoningBody).length > 0;
+  if (!proxy && !hasBody) return undefined;
+  return (async (...args: Parameters<typeof fetch>): Promise<Response> => {
+    const [input, init] = args;
+    let next: RequestInit = init ?? {};
+    if (hasBody && typeof next.body === "string") {
+      try {
+        next = { ...next, body: JSON.stringify({ ...JSON.parse(next.body), ...reasoningBody }) };
+      } catch {
+        // non-JSON body — leave as-is
+      }
+    }
+    if (proxy) {
+      // Bun-specific option — tunnels only this provider's requests.
+      (next as RequestInit & { proxy?: string }).proxy = proxy;
+    }
+    return fetch(input, next);
+  }) as typeof fetch;
+}
+
 export const factory: ProviderDefinition = {
   id: "factory",
   name: "Factory",
@@ -71,16 +95,14 @@ export const factory: ProviderDefinition = {
     if (!apiKey) {
       throw new Error("FACTORY_API_KEY is not set");
     }
-    // @ai-sdk/openai-compatible → Bearer auth (matches Factory) and surfaces
-    // upstream reasoning_content as reasoning parts. Reasoning body per config.
     const reasoningBody = getCompatReasoningBody(`factory/${modelId}`, loadConfig());
-    const reasoningFetch = createReasoningFetchWrapper(reasoningBody);
+    const fetchFn = factoryFetch(reasoningBody);
     return createOpenAICompatible({
       name: "factory",
       baseURL: BASE_URL,
       apiKey,
       headers: factoryHeaders(modelId),
-      ...(reasoningFetch ? { fetch: reasoningFetch as typeof fetch } : {}),
+      ...(fetchFn ? { fetch: fetchFn } : {}),
     }).chatModel(modelId);
   },
 
