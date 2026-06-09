@@ -6,117 +6,96 @@
   <img alt="SoulForge" src="assets/SOULFORGE_LOGO.png" width="560" />
 </picture>
 
-<p><strong>The AI coding agent that edits symbols, not strings.</strong></p>
+<p><strong>SoulForge · lildebil0 fork — one chat for <em>all</em> the AI subscriptions you already pay for.</strong></p>
 
 <p>
-  <a href="https://www.npmjs.com/package/@proxysoul/soulforge"><img alt="npm" src="https://img.shields.io/npm/v/@proxysoul/soulforge?label=npm&color=7844f0&style=flat-square" /></a>
-  <a href="https://github.com/ProxySoul/soulforge/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/ProxySoul/soulforge/ci.yml?label=ci&style=flat-square" /></a>
+  <a href="https://github.com/proxysoul/soulforge">upstream: proxysoul/soulforge</a> ·
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-BSL%201.1-blue.svg?style=flat-square" /></a>
-  <a href="https://soulforge.proxysoul.com"><img alt="Docs" src="https://img.shields.io/badge/docs-soulforge.proxysoul.com-555.svg?style=flat-square" /></a>
-    <a href="https://discord.gg/fX4H7GYSMJ"><img alt="Discord" src="https://img.shields.io/badge/discord-join-5865F2.svg?style=flat-square&logo=discord&logoColor=white" /></a>
 </p>
 
 </div>
 
-## Install
+> Fork of [**proxysoul/soulforge**](https://github.com/proxysoul/soulforge) — *"the AI
+> coding agent that edits symbols, not strings."* This README covers what **the fork
+> adds**; for the full feature set, benchmarks and docs see the
+> [upstream README](https://github.com/proxysoul/soulforge#readme) and
+> [docs](https://soulforge.proxysoul.com).
+
+## The idea
+
+Turn SoulForge into an **all‑in‑one cockpit for your personal AI subscriptions.**
+Instead of one client per service, plug every subscription you pay for in as a
+first‑class provider, pick any model from a single `/model` list — and fix the
+cross‑platform rough edges (macOS **and** Windows) that get in the way.
+
+It builds on SoulForge's existing proxy / CLIProxyAPI integration (which already
+brings Claude Max / Codex / Antigravity subscriptions) and adds more subscription
+backends plus reliability fixes.
+
+## What this fork adds
+
+### New subscription providers
+
+| Provider | id | What | Key |
+|----------|----|------|-----|
+| **Z.AI** | `zai` | Zhipu **GLM Coding Plan** — official OpenAI‑compatible coding endpoint, surfaces GLM `reasoning_content`. | `ZAI_API_KEY` |
+| **Factory** | `factory` | **Factory.ai Droid** subscription — the OpenAI‑compatible inference endpoint the Droid CLI uses, with per‑model `x-api-provider` routing. | `FACTORY_API_KEY` |
+
+Both appear automatically in `/keys` and `/model`.
+
+### Cross‑platform fixes (also opened as PRs upstream)
+
+- **macOS — no more 2‑second freeze.** The status bar ran `vmmap --summary` on the
+  main process every 2s, stalling the whole TUI on a fixed cadence. The footprint
+  is now cached and refreshed off the poll's await path. *(PR #103)*
+- **Windows — readable shell output.** The shell tool decoded `cmd.exe` output as
+  UTF‑8 unconditionally, but cmd emits the console **OEM code page** (e.g. cp866),
+  so non‑ASCII came back as mojibake and models "couldn't see the output". Now
+  decoded via the active console code page. *(PR #105)*
+- **Proxy — reasoning is visible.** Proxied non‑Claude models (Gemini, GLM, …)
+  return `reasoning_content`, but the proxy provider used `@ai-sdk/openai` which
+  drops it. Switched to `@ai-sdk/openai-compatible`, so thinking shows in the
+  verbose tab. *(PR #106)*
+
+## Build & run
+
+This fork is built from source (Bun ≥ 1.3.13):
 
 ```bash
-brew tap proxysoul/tap && brew install soulforge
+git clone https://github.com/lildebil0/soulforge && cd soulforge
+bun install
+bun run dev          # run from source
+# or: bun run build  → a standalone binary in bin/
 ```
 
-```bash
-# alternatives
-bun install -g @proxysoul/soulforge
-# or download a prebuilt binary from https://github.com/ProxySoul/soulforge/releases/latest
-```
+## Use
 
-macOS, Linux, and Windows 10 1809+ / Windows 11 (x64). On Windows, grab `soulforge-<version>-windows-x64.zip` (portable) or `soulforge-setup-<version>-x64.exe` (setup wizard) from the [latest release](https://github.com/proxysoul/soulforge/releases/latest). ARM64 not yet supported (tracked upstream).
+1. **Add a subscription key:** `/keys` → pick the provider (Z.AI / Factory / …) →
+   paste your key. Stored in the OS keychain / encrypted `secrets.dat`, never
+   plaintext.
+2. **Pick a model:** `/model` → provider → model.
 
-## Quick start
+### Region‑gated subscriptions (e.g. Factory)
 
-```bash
-soulforge --set-key anthropic sk-ant-...
-cd your-project
-soulforge
-```
+Some backends geo‑block by IP. This fork ships **no in‑app proxy** — route around
+it at the **network layer** with a transparent **VPN / TUN**. Note the OS "system
+proxy" is ignored by Bun's `fetch`; a TUN tunnel covers all traffic (enable
+*Bypass LAN* so local SSH keeps working). Provider‑scoped env overrides exist
+where useful: `FACTORY_API_PROVIDER`, `FACTORY_ORG_ID`.
 
-Other providers and OpenAI-compatible endpoints: [docs/providers](https://soulforge.proxysoul.com/providers).
+## Status & honesty
 
-## Benchmarks
-
-Same model (Claude Opus 4.6), same codebase, same prompt.
-
-**Bug fix**
-
-| | SoulForge | OpenCode |
-|---|---|---|
-| Time | **6m 22s** | 11m 18s |
-| Cost | **$1.70** | $3.52 |
-| Result | Correct | Correct |
-
-**Audit task** (*"verify cost reporting is wired correctly"*)
-
-| | SoulForge | OpenCode |
-|---|---|---|
-| Time | **2m 00s** | 5m 56s |
-| Cost | **$0.84** | $2.61 |
-| Accuracy | **7/7 (100%)** | 4/7 (57%) |
-| False alarms | **0** | 3 |
-| Wrong claims | **0** | 1 |
-
-> Same bug. Same model. Same repo. Half the time. Half the cost.
-
-<sub>Sources: [recording 1](https://x.com/BniWael/status/2040172009666015641/video/1) · [recording 2](https://x.com/BniWael/status/2042364421373121018/video/1) · [recording 3](https://x.com/BniWael/status/2044826445382373759/video/1)</sub>
-
-## Features
-
-| Feature | What it does |
-|---|---|
-| **AST editing** | TS/JS edits via ts-morph, 65+ ops, atomic batches. [docs](https://soulforge.proxysoul.com/tools/ast-edit) |
-| **Live Soul Map** | SQLite graph, PageRank + git co-change, blast-radius tags. [docs](https://soulforge.proxysoul.com/concepts/repo-map) |
-| **LSP + Mason** | 576+ servers installable from the TUI |
-| **33 languages** | symbol-level reads, not file dumps |
-| **Compound tools** | `rename_symbol`, `move_symbol`, `refactor`, `project` (23 toolchains) |
-| **Task router** | route each slot (spark / ember / compact / verify / web / semantic) to a different model per tab. Haiku for exploration, Sonnet for code, Flash for compaction. `/router`. [docs](https://soulforge.proxysoul.com/recipes/task-router) |
-| **V2 compaction** | usually 0 LLM tokens. [docs](https://soulforge.proxysoul.com/context/compaction) |
-| **Parallel agents** | Spark + Ember with shared I/O cache |
-| **Embedded Neovim** | real nvim in a PTY, your config |
-| **5 tabs** | per-tab model, session, checkpoints, file claims |
-| **Time machine** | every prompt is a checkpoint with a git tag. `Ctrl+B` / `Ctrl+F` rewinds and redoes both conversation and files on disk. `/checkpoint undo <N>`, `/checkpoint save`, per-tab |
-| **Sessions** | auto-saved JSONL, crash-resilient, resumable by short-id prefix. Export to markdown / JSON / clipboard. `Ctrl+P` browser, multi-tab. [docs](https://soulforge.proxysoul.com/tools/sessions) |
-| **Memory** | cross-session SQLite store of prefs, decisions, gotchas, context. Auto-recalled per turn from prompt + edited files. Project + global scopes, browser at `/memory`. [docs](https://soulforge.proxysoul.com/tools/memory) |
-| **21 providers** | Anthropic, OpenAI, Google, Groq, DeepSeek, Bedrock, Ollama, LM Studio, ... + any OpenAI-compatible |
-| **Cost tracking** | per-model + per-subagent USD, cache-aware |
-| **MCP + hooks** | any MCP server, 13 events, drop-in `.claude/settings.json` |
-| **Headless mode** | run from CI, scripts, pipelines. JSON / event stream, resumable sessions. [docs](https://soulforge.proxysoul.com/recipes/headless) |
-| **Hearth** *(exp)* | remote control via Telegram or Discord, your host only |
-| **36 themes** | hot-reloaded JSON, Kitty inline images |
+- **Z.AI + the three fixes** — clean; `bun run typecheck` (0 errors) and
+  `bun run lint` pass; opened as PRs against upstream.
+- **Factory** — reverse‑engineered from the **official** Droid CLI for personal
+  interop with **your own** subscription. `glm-5.1` is verified end‑to‑end; the
+  wider Factory menu needs each model's exact id + matching `x-api-provider`, and
+  several Factory→upstream routes are themselves region‑gated. Driving a paid
+  subscription through a non‑official client may conflict with Factory's Terms —
+  your call on your own account. Not submitted upstream.
 
 ## License
 
-[BSL 1.1](LICENSE). Free for personal and internal use. Commercial use: [commercial license](COMMERCIAL_LICENSE.md). Converts to Apache 2.0 on March 15, 2030.
-
-## Sponsors
-
-<div align="center">
-
-<sub><b>Backed by</b></sub>
-
-<a href="https://llmgateway.io/dashboard?ref=6tjJR2H3X4E9RmVQiQwK" title="LLM Gateway">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="assets/llmg-white.svg" />
-    <source media="(prefers-color-scheme: light)" srcset="assets/llmg-dark.svg" />
-    <img alt="LLM Gateway" src="assets/llmg-dark.svg" height="56" />
-  </picture>
-</a>
-
-<p><sub><i>One API, 200+ models, up to 30% off frontier. Wired into SoulForge as the <code>llmgateway</code> provider.</i></sub></p>
-
-<a href="https://llmgateway.io/dashboard?ref=6tjJR2H3X4E9RmVQiQwK"><img src="https://img.shields.io/badge/Get_an_LLM_Gateway_key-7C3AED.svg?style=for-the-badge&labelColor=0a0818" alt="Get an LLM Gateway key" /></a>
-
-<br/>
-
-<sub><a href="https://github.com/sponsors/proxysoul">Sponsor on GitHub</a> (monthly or one-time) · <a href="https://paypal.me/waeru">PayPal</a> (one-time) · <a href="BACKERS.md">All backers</a></sub>
-
-</div>
-
+[BSL 1.1](LICENSE), inherited from upstream — free for personal and internal use;
+converts to Apache 2.0 on 2030‑03‑15. Commercial use:
+[commercial license](COMMERCIAL_LICENSE.md).
