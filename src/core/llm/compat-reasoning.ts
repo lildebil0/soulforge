@@ -23,6 +23,7 @@ const COMPAT_PROVIDERS = new Set([
   "fireworks",
   "minimax",
   "zai",
+  "factory",
   "copilot",
   "github-models",
   "opencode-go",

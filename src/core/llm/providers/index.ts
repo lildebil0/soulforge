@@ -4,6 +4,7 @@ export { codex } from "./codex.js";
 export { copilot } from "./copilot.js";
 export { buildCustomProvider } from "./custom.js";
 export { deepseek } from "./deepseek.js";
+export { factory } from "./factory.js";
 export { fireworks } from "./fireworks.js";
 export { githubModels } from "./github-models.js";
 export { google } from "./google.js";
@@ -30,6 +31,7 @@ import { codex } from "./codex.js";
 import { copilot } from "./copilot.js";
 import { buildCustomProvider } from "./custom.js";
 import { deepseek } from "./deepseek.js";
+import { factory } from "./factory.js";
 import { fireworks } from "./fireworks.js";
 import { githubModels } from "./github-models.js";
 import { google } from "./google.js";
@@ -63,6 +65,7 @@ const BUILTIN_PROVIDERS: ProviderDefinition[] = [
   mistral,
   bedrock,
   fireworks,
+  factory,
   minimax,
   zai,
   nim,
