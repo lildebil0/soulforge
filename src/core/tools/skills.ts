@@ -16,7 +16,22 @@ const TRUSTED_SOURCES = new Set([
   "microsoft/skills",
   "google-labs-code/stitch-skills",
   "vercel/next.js",
+  // Fork-recommended design / taste skills
+  "pbakaus/impeccable",
+  "Leonxlnx/taste-skill",
 ]);
+
+/** Curated skills surfaced via `action: recommended` (id = owner/repo/skillId). */
+const RECOMMENDED_SKILLS: Array<{ id: string; note: string }> = [
+  {
+    id: "pbakaus/impeccable/impeccable",
+    note: "frontend design quality — /impeccable, 23 subcommands + 41 detector rules",
+  },
+  {
+    id: "Leonxlnx/taste-skill/design-taste-frontend",
+    note: "design taste for AI UIs — better layout, typography, motion, spacing",
+  },
+];
 
 function formatSearchResult(s: {
   name: string;
@@ -66,9 +81,18 @@ export function createSkillsTool(
       "- list_active: show skills currently loaded in AI context.\n" +
       "- load: load an installed skill into AI context. Requires name param.\n" +
       "- unload: remove a skill from AI context. Requires name param.\n" +
-      "- install: install a skill from skills.sh. Requires id param (from search results). Optionally set global: true.",
+      "- install: install a skill from skills.sh. Requires id param (from search results). Optionally set global: true.\n" +
+      "- recommended: a short curated list of high-quality skills (design/taste) worth considering.",
     inputSchema: z.object({
-      action: z.enum(["search", "list_installed", "list_active", "load", "unload", "install"]),
+      action: z.enum([
+        "search",
+        "recommended",
+        "list_installed",
+        "list_active",
+        "load",
+        "unload",
+        "install",
+      ]),
       query: z.string().nullable().optional().describe("For search: search query"),
       name: z.string().nullable().optional().describe("For load/unload: skill name"),
       id: z
@@ -284,6 +308,21 @@ export function createSkillsTool(
               success: true,
               output: `Skill installed ${isGlobal ? "globally" : "to project"}. Use skills(action: list_installed) to see it, then load it.`,
             };
+          }
+
+          case "recommended": {
+            const have = new Set(listInstalledSkills().map((s) => s.name));
+            const lines = [
+              "Recommended skills (curated):",
+              "",
+              ...RECOMMENDED_SKILLS.map((r) => {
+                const name = r.id.split("/").slice(2).join("/");
+                return `${have.has(name) ? "● " : "  "}${name} — ${r.note}  → add: ${r.id}`;
+              }),
+              "",
+              "To install: skills(action: install, id: '<id from above>')",
+            ];
+            return { success: true, output: lines.join("\n") };
           }
 
           default:
