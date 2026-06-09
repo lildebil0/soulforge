@@ -23,6 +23,7 @@ const TRUSTED_SOURCES = new Set([
 
 /** Curated skills surfaced via `action: recommended` (id = owner/repo/skillId). */
 const RECOMMENDED_SKILLS: Array<{ id: string; note: string }> = [
+  // Design / taste
   {
     id: "pbakaus/impeccable/impeccable",
     note: "frontend design quality — /impeccable, 23 subcommands + 41 detector rules",
@@ -31,6 +32,18 @@ const RECOMMENDED_SKILLS: Array<{ id: string; note: string }> = [
     id: "Leonxlnx/taste-skill/design-taste-frontend",
     note: "design taste for AI UIs — better layout, typography, motion, spacing",
   },
+  // Anthropic official pack — broad coverage (anthropics/skills)
+  { id: "anthropics/skills/docx", note: "create / edit Word documents" },
+  { id: "anthropics/skills/pdf", note: "create / edit PDF files" },
+  { id: "anthropics/skills/pptx", note: "create / edit PowerPoint decks" },
+  { id: "anthropics/skills/xlsx", note: "create / edit Excel spreadsheets" },
+  { id: "anthropics/skills/doc-coauthoring", note: "collaborative document authoring" },
+  { id: "anthropics/skills/frontend-design", note: "frontend design guidance" },
+  { id: "anthropics/skills/web-artifacts-builder", note: "build self-contained web artifacts" },
+  { id: "anthropics/skills/webapp-testing", note: "test web apps end-to-end" },
+  { id: "anthropics/skills/mcp-builder", note: "build MCP servers" },
+  { id: "anthropics/skills/claude-api", note: "Claude / Anthropic API reference" },
+  { id: "anthropics/skills/skill-creator", note: "author new skills" },
 ];
 
 function formatSearchResult(s: {
