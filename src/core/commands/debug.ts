@@ -51,6 +51,23 @@ async function handleLspRestart(input: string, ctx: CommandContext): Promise<voi
   }
 }
 
+async function handleLspPopular(_input: string, ctx: CommandContext): Promise<void> {
+  const { installPopularLspServers, POPULAR_LSP_PACKAGES } = await import(
+    "../intelligence/backends/lsp/installer.js"
+  );
+  sysMsg(
+    ctx,
+    `Installing ${String(POPULAR_LSP_PACKAGES.length)} popular language servers (one-time, persists)…`,
+  );
+  const { installed, skipped, failed } = await installPopularLspServers((msg) => sysMsg(ctx, msg));
+  const parts: string[] = [];
+  if (installed.length)
+    parts.push(`installed ${String(installed.length)}: ${installed.join(", ")}`);
+  if (skipped.length) parts.push(`already had ${String(skipped.length)}`);
+  if (failed.length) parts.push(`failed ${String(failed.length)}: ${failed.join("; ")}`);
+  sysMsg(ctx, `LSP popular — ${parts.join(" · ") || "nothing to do"}.`);
+}
+
 export function register(map: Map<string, CommandHandler>): void {
   map.set("/status", handleStatus);
   map.set("/model-events", handleModelEvents);
@@ -64,5 +81,7 @@ export function register(map: Map<string, CommandHandler>): void {
   map.set("/lsp install", handleLspInstall);
   map.set("/lsp-restart", handleLspRestart);
   map.set("/lsp restart", handleLspRestart);
+  map.set("/lsp-popular", handleLspPopular);
+  map.set("/lsp popular", handleLspPopular);
   map.set("/update", handleUpdate);
 }

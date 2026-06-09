@@ -451,6 +451,55 @@ export function getRecommendedPackages(cwd: string): PackageStatus[] {
     .map(checkPackageStatus);
 }
 
+/** Curated set of widely-used language servers (Mason package names). */
+export const POPULAR_LSP_PACKAGES = [
+  "typescript-language-server",
+  "pyright",
+  "gopls",
+  "rust-analyzer",
+  "clangd",
+  "lua-language-server",
+  "bash-language-server",
+  "json-lsp",
+  "yaml-language-server",
+  "html-lsp",
+  "css-lsp",
+  "marksman",
+  "dockerfile-language-server",
+  "taplo",
+];
+
+/**
+ * Install the curated popular language servers that aren't present yet. They
+ * persist in ~/.soulforge/lsp-servers/, so this is a one-time "batteries on" —
+ * no per-boot work and no multi-GB churn (the normal flow installs per language
+ * on demand). Missing-from-registry / failed installs are reported, not thrown.
+ */
+export async function installPopularLspServers(
+  onProgress?: (msg: string) => void,
+): Promise<{ installed: string[]; skipped: string[]; failed: string[] }> {
+  const byName = new Map(loadRegistry().map((p) => [p.name, p]));
+  const installed: string[] = [];
+  const skipped: string[] = [];
+  const failed: string[] = [];
+  for (const name of POPULAR_LSP_PACKAGES) {
+    const pkg = byName.get(name);
+    if (!pkg) {
+      failed.push(`${name} (not in registry)`);
+      continue;
+    }
+    if (getInstalledVersion(name)) {
+      skipped.push(name);
+      continue;
+    }
+    onProgress?.(`Installing ${name}…`);
+    const r = await installPackage(pkg, onProgress);
+    if (r.success) installed.push(name);
+    else failed.push(`${name}: ${r.error ?? "failed"}`);
+  }
+  return { installed, skipped, failed };
+}
+
 /** Install a package to ~/.soulforge/lsp-servers/ */
 export async function installPackage(
   pkg: MasonPackage,
