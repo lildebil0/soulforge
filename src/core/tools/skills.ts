@@ -19,6 +19,13 @@ const TRUSTED_SOURCES = new Set([
   // Fork-recommended design / taste skills
   "pbakaus/impeccable",
   "Leonxlnx/taste-skill",
+  // Reputable orgs whose skills the fork recommends
+  "microsoft/azure-skills",
+  "github/awesome-copilot",
+  "hashicorp/agent-skills",
+  "clerk/skills",
+  "firebase/agent-skills",
+  "trailofbits/skills-curated",
 ]);
 
 /** Curated skills surfaced via `action: recommended` (id = owner/repo/skillId). */
@@ -44,6 +51,36 @@ const RECOMMENDED_SKILLS: Array<{ id: string; note: string }> = [
   { id: "anthropics/skills/mcp-builder", note: "build MCP servers" },
   { id: "anthropics/skills/claude-api", note: "Claude / Anthropic API reference" },
   { id: "anthropics/skills/skill-creator", note: "author new skills" },
+  // Web development
+  {
+    id: "vercel-labs/agent-skills/vercel-react-best-practices",
+    note: "React best practices (Vercel)",
+  },
+  { id: "wshobson/agents/typescript-advanced-types", note: "advanced TypeScript types" },
+  { id: "wshobson/agents/nextjs-app-router-patterns", note: "Next.js App Router patterns" },
+  { id: "wshobson/agents/tailwind-design-system", note: "Tailwind CSS design system" },
+  { id: "clerk/skills/clerk-nextjs-patterns", note: "auth with Clerk + Next.js" },
+  // Android / mobile
+  { id: "wshobson/agents/mobile-android-design", note: "Android UI / design" },
+  {
+    id: "affaan-m/everything-claude-code/android-clean-architecture",
+    note: "Android clean architecture",
+  },
+  {
+    id: "affaan-m/everything-claude-code/kotlin-coroutines-flows",
+    note: "Kotlin coroutines & flows",
+  },
+  // DevOps
+  { id: "sickn33/antigravity-awesome-skills/docker-expert", note: "Docker expert" },
+  { id: "github/awesome-copilot/multi-stage-dockerfile", note: "multi-stage Dockerfiles" },
+  { id: "jeffallan/claude-skills/kubernetes-specialist", note: "Kubernetes" },
+  { id: "hashicorp/agent-skills/terraform-style-guide", note: "Terraform style guide (HashiCorp)" },
+  { id: "jeffallan/claude-skills/devops-engineer", note: "general DevOps engineer" },
+  // Reverse engineering / security research
+  { id: "wshobson/agents/protocol-reverse-engineering", note: "protocol reverse engineering" },
+  { id: "wshobson/agents/anti-reversing-techniques", note: "anti-reversing techniques" },
+  { id: "trailofbits/skills-curated/ghidra-headless", note: "headless Ghidra RE (Trail of Bits)" },
+  { id: "ljagiello/ctf-skills/ctf-reverse", note: "CTF reverse engineering" },
 ];
 
 function formatSearchResult(s: {
