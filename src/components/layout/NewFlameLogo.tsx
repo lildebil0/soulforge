@@ -1,5 +1,6 @@
 import { fg as fgStyle, StyledText, TextAttributes, type TextRenderable } from "@opentui/core";
 import { useEffect, useMemo, useRef } from "react";
+import { isLowPowerMode } from "../../core/low-power.js";
 import { useTheme } from "../../core/theme/index.js";
 
 // ── Real-flame forge logo ────────────────────────────────────────────
@@ -774,51 +775,54 @@ export function NewFlameLogo({ cols, rows }: NewFlameLogoProps) {
       }
     };
     tick();
-    const id = setInterval(tick, 33);
+    const id = setInterval(tick, isLowPowerMode() ? 500 : 33);
     return () => clearInterval(id);
   }, [cols, worldPivotX, worldPivotY]);
 
   // Sim + render @ 10fps — original rate.
   useEffect(() => {
     const SIM_DT = 0.1;
-    const id = setInterval(() => {
-      try {
-        const t = performance.now() * 0.001;
-        stepSim(sim, intensityRef.current, breathRef.current, surgesRef.current, t);
-        // Rising embers sampled from hot cells — subtle motion that
-        // reads as "alive" between strikes.
-        emitAmbientSparks(sparksRef.current, sim, 12);
-        updateSparks(sparksRef.current, SIM_DT, rows);
+    const id = setInterval(
+      () => {
+        try {
+          const t = performance.now() * 0.001;
+          stepSim(sim, intensityRef.current, breathRef.current, surgesRef.current, t);
+          // Rising embers sampled from hot cells — subtle motion that
+          // reads as "alive" between strikes.
+          emitAmbientSparks(sparksRef.current, sim, 12);
+          updateSparks(sparksRef.current, SIM_DT, rows);
 
-        const flameEndY = rows - WORDMARK.length;
-        const measured = computeGlobalIntensity(sim.heat, cols, flameEndY);
-        globalIntensityRef.current = globalIntensityRef.current * 0.85 + measured * 0.15;
+          const flameEndY = rows - WORDMARK.length;
+          const measured = computeGlobalIntensity(sim.heat, cols, flameEndY);
+          globalIntensityRef.current = globalIntensityRef.current * 0.85 + measured * 0.15;
 
-        if (ref.current) {
-          const currentFrame = FRAMES[hammerFrameRef.current];
-          const originX = worldPivotX - currentFrame.pivotX;
-          const originY = worldPivotY - currentFrame.pivotY + Math.round(hammerYRef.current);
-          ref.current.content = renderComposite(
-            sim,
-            sparksRef.current,
-            {
-              frame: hammerFrameRef.current,
-              originX,
-              originY,
-              flashStrength: flashRef.current,
-            },
-            tk.brand,
-            tk.brandAlt,
-            tk.brandDim,
-            tk.textFaint,
-            globalIntensityRef.current,
-            breathPhaseRef.current,
-          );
+          if (ref.current) {
+            const currentFrame = FRAMES[hammerFrameRef.current];
+            const originX = worldPivotX - currentFrame.pivotX;
+            const originY = worldPivotY - currentFrame.pivotY + Math.round(hammerYRef.current);
+            ref.current.content = renderComposite(
+              sim,
+              sparksRef.current,
+              {
+                frame: hammerFrameRef.current,
+                originX,
+                originY,
+                flashStrength: flashRef.current,
+              },
+              tk.brand,
+              tk.brandAlt,
+              tk.brandDim,
+              tk.textFaint,
+              globalIntensityRef.current,
+              breathPhaseRef.current,
+            );
+          }
+        } catch {
+          // torn down mid-tick
         }
-      } catch {
-        // torn down mid-tick
-      }
-    }, 100);
+      },
+      isLowPowerMode() ? 500 : 100,
+    );
     return () => clearInterval(id);
   }, [sim, tk, cols, rows, worldPivotX, worldPivotY]);
 

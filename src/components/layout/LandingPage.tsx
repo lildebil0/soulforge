@@ -3,6 +3,7 @@ import { useTerminalDimensions } from "@opentui/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { icon } from "../../core/icons.js";
 import type { ProviderStatus } from "../../core/llm/provider.js";
+import { isLowPowerMode } from "../../core/low-power.js";
 import type { PrerequisiteStatus } from "../../core/setup/prerequisites.js";
 import { getThemeTokens, useTheme } from "../../core/theme/index.js";
 import { WORDMARK } from "../../core/utils/splash.js";
@@ -50,62 +51,65 @@ function RuneField({ cols, rows }: { cols: number; rows: number }) {
       particlesRef.current.push(p);
     }
 
-    const timer = setInterval(() => {
-      tickRef.current++;
-      const particles = particlesRef.current;
-      const tk = getThemeTokens();
+    const timer = setInterval(
+      () => {
+        tickRef.current++;
+        const particles = particlesRef.current;
+        const tk = getThemeTokens();
 
-      // Slowly spawn new particles
-      if (particles.length < maxParticles && Math.random() < 0.08) {
-        particles.push(spawnParticle(cols, rows));
-      }
-
-      // Build sparse grid
-      const grid = new Map<string, { rune: string; color: string }>();
-
-      for (let i = particles.length - 1; i >= 0; i--) {
-        const p = particles[i] as Particle;
-        p.life += 0.03 * p.speed;
-
-        // Slow gentle drift upward
-        p.y -= p.speed * 0.08;
-        p.x += Math.sin(tickRef.current * 0.05 + i * 2) * 0.03;
-
-        // Lifecycle: fade in (0-1) → visible (1-3) → fade out (3-4) → dead (4+)
-        let alpha: number;
-        if (p.life < 1) alpha = p.life;
-        else if (p.life < 3) alpha = 1;
-        else if (p.life < 4) alpha = 4 - p.life;
-        else {
-          particles.splice(i, 1);
-          continue;
+        // Slowly spawn new particles
+        if (particles.length < maxParticles && Math.random() < 0.08) {
+          particles.push(spawnParticle(cols, rows));
         }
 
-        const gx = Math.round(p.x);
-        const gy = Math.round(p.y);
-        if (gx < 0 || gx >= cols || gy < 0 || gy >= rows) {
-          particles.splice(i, 1);
-          continue;
+        // Build sparse grid
+        const grid = new Map<string, { rune: string; color: string }>();
+
+        for (let i = particles.length - 1; i >= 0; i--) {
+          const p = particles[i] as Particle;
+          p.life += 0.03 * p.speed;
+
+          // Slow gentle drift upward
+          p.y -= p.speed * 0.08;
+          p.x += Math.sin(tickRef.current * 0.05 + i * 2) * 0.03;
+
+          // Lifecycle: fade in (0-1) → visible (1-3) → fade out (3-4) → dead (4+)
+          let alpha: number;
+          if (p.life < 1) alpha = p.life;
+          else if (p.life < 3) alpha = 1;
+          else if (p.life < 4) alpha = 4 - p.life;
+          else {
+            particles.splice(i, 1);
+            continue;
+          }
+
+          const gx = Math.round(p.x);
+          const gy = Math.round(p.y);
+          if (gx < 0 || gx >= cols || gy < 0 || gy >= rows) {
+            particles.splice(i, 1);
+            continue;
+          }
+
+          const color = alpha > 0.6 ? tk.brandDim : alpha > 0.3 ? tk.textFaint : tk.textSubtle;
+          grid.set(`${String(gx)},${String(gy)}`, { rune: p.rune, color });
         }
 
-        const color = alpha > 0.6 ? tk.brandDim : alpha > 0.3 ? tk.textFaint : tk.textSubtle;
-        grid.set(`${String(gx)},${String(gy)}`, { rune: p.rune, color });
-      }
-
-      // Render sparse — only rune cells, rest is spaces
-      const parts: ReturnType<ReturnType<typeof fgStyle>>[] = [];
-      for (let y = 0; y < rows; y++) {
-        for (let x = 0; x < cols; x++) {
-          const cell = grid.get(`${String(x)},${String(y)}`);
-          parts.push(cell ? fgStyle(cell.color)(cell.rune) : fgStyle(tk.textSubtle)(" "));
+        // Render sparse — only rune cells, rest is spaces
+        const parts: ReturnType<ReturnType<typeof fgStyle>>[] = [];
+        for (let y = 0; y < rows; y++) {
+          for (let x = 0; x < cols; x++) {
+            const cell = grid.get(`${String(x)},${String(y)}`);
+            parts.push(cell ? fgStyle(cell.color)(cell.rune) : fgStyle(tk.textSubtle)(" "));
+          }
+          if (y < rows - 1) parts.push(fgStyle(tk.textSubtle)("\n"));
         }
-        if (y < rows - 1) parts.push(fgStyle(tk.textSubtle)("\n"));
-      }
 
-      try {
-        if (textRef.current) textRef.current.content = new StyledText(parts);
-      } catch {}
-    }, 250); // Slow tick — particles drift gently
+        try {
+          if (textRef.current) textRef.current.content = new StyledText(parts);
+        } catch {}
+      },
+      isLowPowerMode() ? 2000 : 250,
+    ); // Slow tick — particles drift gently
 
     return () => clearInterval(timer);
   }, [cols, rows, maxParticles]);
@@ -155,12 +159,15 @@ function EmberDivider({ width: w }: { width: number }) {
   const tickRef = useRef(0);
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      tickRef.current++;
-      try {
-        if (ref.current) ref.current.content = buildEmberLine(tickRef.current, w);
-      } catch {}
-    }, 100);
+    const timer = setInterval(
+      () => {
+        tickRef.current++;
+        try {
+          if (ref.current) ref.current.content = buildEmberLine(tickRef.current, w);
+        } catch {}
+      },
+      isLowPowerMode() ? 1000 : 100,
+    );
     return () => clearInterval(timer);
   }, [w]);
 

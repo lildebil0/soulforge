@@ -26,6 +26,7 @@ import {
   PROVIDER_CONFIGS,
 } from "../core/llm/models.js";
 import { notifyProviderSwitch } from "../core/llm/provider.js";
+import { isLowPowerMode } from "../core/low-power.js";
 import { disposeMCPManager, getMCPManager } from "../core/mcp/index.js";
 import { initForbidden } from "../core/security/forbidden.js";
 import { SessionManager } from "../core/sessions/manager.js";
@@ -151,6 +152,7 @@ function ShutdownSplash({
   const { width: termWidth } = useTerminalDimensions();
 
   useEffect(() => {
+    if (isLowPowerMode()) return;
     const timer = setInterval(() => setTick((t) => t + 1), 80);
     return () => clearInterval(timer);
   }, []);
